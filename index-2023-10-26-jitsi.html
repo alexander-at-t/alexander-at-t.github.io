@@ -16,11 +16,12 @@
         alert('Cannot find video input device');
         return;
       }
+      alert('firstVideoInputDeviceLabel:' + firstVideoInputDeviceLabel);
       const domain = 'meet.jit.si';
       const options = {
         roomName: 'test-t-2023-10-26',
         width: '100%',
-        height: '100%',
+        height: 500,
         configOverwrite: { prejoinPageEnabled: false, deeplinking: { disabled: true } },
         devices: { videoInput: firstVideoInputDeviceLabel },
       };
