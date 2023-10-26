@@ -21,7 +21,6 @@
           alert('Cannot find video input device');
           return;
         }
-        localStorage.setItem(key, firstVideoInputDeviceLabel);
         location.search = '?' + key + '=' + encodeURIComponent(firstVideoInputDeviceLabel);
         return;
       }
