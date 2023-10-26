@@ -8,15 +8,26 @@
   <script src="https://meet.jit.si/external_api.js"></script>
   <script>
     (async function() {
-      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputDevices = devices.filter(device => device.kind === 'videoinput');
-      const firstVideoInputDeviceLabel = videoInputDevices[0]?.label;
+      // Get first video input device label
+      const key = 'firstVideoInputDeviceLabel';
+      const firstVideoInputDeviceLabel = new URLSearchParams(location.search).get(key);
       if (!firstVideoInputDeviceLabel) {
-        alert('Cannot find video input device');
+        // if not defined in URL - get it from navigator.mediaDevices, and then redirect to URL with it
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputDevices = devices.filter(device => device.kind === 'videoinput');
+        const firstVideoInputDeviceLabel = videoInputDevices[0]?.label;
+        if (!firstVideoInputDeviceLabel) {
+          alert('Cannot find video input device');
+          return;
+        }
+        localStorage.setItem(key, firstVideoInputDeviceLabel);
+        location.search = '?' + key + '=' + encodeURIComponent(firstVideoInputDeviceLabel);
         return;
       }
       console.log('firstVideoInputDeviceLabel:' + firstVideoInputDeviceLabel);
+
+      // Initialize Jitsi Meet with preselected video input device
       const domain = 'meet.jit.si';
       const options = {
         roomName: 'test-t-2023-10-26',
