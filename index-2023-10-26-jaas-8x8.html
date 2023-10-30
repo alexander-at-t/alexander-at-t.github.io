@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+<body>
+  <script src="https://meet.jit.si/external_api.js"></script>
+  <script>
+    (async function() {
+      // Get first video input device label
+      const key = 'firstVideoInputDeviceLabel';
+      const firstVideoInputDeviceLabel = new URLSearchParams(location.search).get(key);
+      if (!firstVideoInputDeviceLabel) {
+        // if not defined in URL - get it from navigator.mediaDevices, and then redirect to URL with it
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputDevices = devices.filter(device => device.kind === 'videoinput');
+        const firstVideoInputDeviceLabel = videoInputDevices[0]?.label;
+        if (!firstVideoInputDeviceLabel) {
+          alert('Cannot find video input device');
+          return;
+        }
+        location.search = '?' + key + '=' + encodeURIComponent(firstVideoInputDeviceLabel);
+        return;
+      }
+      console.log('firstVideoInputDeviceLabel:' + firstVideoInputDeviceLabel);
+
+      // Initialize Jitsi Meet with preselected video input device
+      const domain = '8x8.vc';
+      const jwt = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InZwYWFzLW1hZ2ljLWNvb2tpZS1mOTZiMTlmZjBlMjE0ZWUxYThhZDAxNGI2NzJlNTExNi80NTE3YWMifQ.eyJyb29tIjoidGVzdC10LTIwMjMtMTAtMjYiLCJjb250ZXh0Ijp7InVzZXIiOnsiaWQiOiJndWVzdC10ZXN0LWphYXMiLCJuYW1lIjoiQWxleGFuZGVyIiwiYXZhdGFyIjoiIiwiZW1haWxJZCI6Imd1ZXN0LXRlc3QtamFhc0B1c2VyLnRlZW15Y28iLCJtb2RlcmF0b3IiOiJ0cnVlIn0sImZlYXR1cmVzIjp7ImxpdmVzdHJlYW1pbmciOiJ0cnVlIiwicmVjb3JkaW5nIjoidHJ1ZSJ9fSwibmJmIjoxNjk4NjU0ODA5LCJleHAiOjE3MDY2OTI5NzAsImF1ZCI6ImppdHNpIiwiaXNzIjoiY2hhdCIsInN1YiI6InZwYWFzLW1hZ2ljLWNvb2tpZS1mOTZiMTlmZjBlMjE0ZWUxYThhZDAxNGI2NzJlNTExNiJ9.RvvhXs4U0TjINvVfDvGKKoroBp9_xvHezUUd9ixn3DOkAZQtjEe9gGYTgmL6ArtuMq6kPd9x9KwINVxVIPee9_EOwDTQWytRlRuXmekaQQZpkjTuxkU7lwErs2EsNPcJDPOJ72Pcoe7dpxfje7KukHt3Hiwx6LaQK1nOqPxgOVNYdFzo9vKzPUFW1nKBamv6tDtGzAnmiXcgFhZDl60t7xPqTzCgkQgMBMlFxZAU_bzZzKvqdwmtbbm0dAyWAMBSkb2oejVCbmG0-GCA_mr4bI1_jMpf5m9R34e9wT009q9QBt_dJulhXBU57F7ckj9YGEl8BF7AapHOm8RSf9k_EFPLuECIlZE_F1Dys0X-j5IAGkvMg3_CCvYOzqGAXYYN9Y3ylWuonnbukcLBmfk1HtQWR-xjxsoT6bmpw0fviSsrELMkf-SZsPht2N3SC0Nzt4a9a_-4m6kl7F4MRF_KSo-KWp4169M7YaI0SULEC4johe9Qj0x8W_iaAxKNRkJx4rdOyI24IFYU54tINPcG7fiTWufq51rlG13OXtKPAxPE1nf-64h1U0-LybWkAMhiXeAwyCJ1elod5MFOHsvwRvcX7HPNH0md9Q68fdOb9Mc-REAOAMcy9Y7XBVtrKLbvkeHuOzNkq9oy70fDbTCaFEqwRhl7nAmjP3vZs6E9Qz0';
+      const options = {
+        roomName: 'vpaas-magic-cookie-f96b19ff0e214ee1a8ad014b672e5116/test-t-2023-10-26',
+        width: '100%',
+        height: 500,
+        configOverwrite: { prejoinPageEnabled: false, deeplinking: { disabled: true } },
+        devices: { videoInput: firstVideoInputDeviceLabel },
+        jwt,
+      };
+      const api = new JitsiMeetExternalAPI(domain, options);
+    })();
+  </script>
+</body>
+</html>
