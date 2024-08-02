@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <button id="stream">Start playing audio and streaming transcription</button>
+    <button id="stop">Stop</button>
+    <div style="margin: 10px">
+      <audio id="audio" src="./index-2024-08-02.mp4"></audio>
+    </div>
+    <div>
+      Audio from: <a href="https://www.youtube.com/watch?v=Qo1OSqBQYmk" target="_blank">https://www.youtube.com/watch?v=Qo1OSqBQYmk</a>
+    </div>
+    <div id="transcription"></div>
+    <script>
+      const audioElement = document.getElementById('audio');
+      const transcriptionElement = document.getElementById('transcription');
+
+      document.getElementById('stream').addEventListener('click', async () => {
+        // don't use this in production - instead see https://deepgram.com/learn/protecting-api-key
+        // tempory key for testing (with expiration)
+        const key = '1c81bca708672f8f44980ca326c7331d0e0ff47f';
+        let mediaRecorder = null;
+        let socket = null;
+
+        stop();
+
+        transcriptionElement.innerHTML = '';
+
+        const stream = audioElement.captureStream();
+        mediaRecorder = new MediaRecorder(stream)
+
+        const model = 'nova-2-meeting';
+
+        const url = 'wss://api.deepgram.com/v1/listen?'
+          + 'smart_format=true&'
+          + 'language=en-US&'
+          + 'model=' + encodeURIComponent(model) + '&'
+          + 'diarize=true';
+        socket = new WebSocket(url, [ 'token', key ]);
+
+        console.log(socket);
+
+        socket.onopen = () => {
+          mediaRecorder.addEventListener('dataavailable', async (event) => {
+            if (!socket) { return; }
+            socket.send(event.data);
+          });
+          mediaRecorder.start(120); // 250?
+          audioElement.play();
+        };
+
+        mediaRecorder.onstart = () => {
+          console.log('MediaRecorder started', mediaRecorder.state);
+        };
+
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type !== 'Results') { return; }
+          if (!data.is_final) { return; }
+          const text = data.channel?.alternatives?.[0]?.transcript;
+          if (!text) { return; }
+          console.log(data);
+          const speakerData = splitBySpeakers(data);
+          for (const row of speakerData) {
+            const startHuman = new Date(row.start * 1000).toISOString().substring(11, 23);
+            const endHuman = new Date(row.end * 1000).toISOString().substring(11, 23);
+
+            const speaker = 'Speaker-' + row.speaker;
+            const next = `[${startHuman} - ${endHuman}] ${speaker}: ${row.text}`;
+            transcriptionElement.innerHTML = next + '<br>' + transcriptionElement.innerHTML;
+            
+          }
+        };
+
+        socket.onerror = (error) => console.error(error);
+
+        socket.onclose = () => {
+          console.log('socket closed');
+          socket = null;
+        };
+
+        function finalizeWebSocket() {
+          if (!socket) { return; }
+          const finalizeMsg = JSON.stringify({ type: "Finalize" });
+          socket.send(finalizeMsg);
+          console.log('Finalize message sent.');
+          setTimeout(() => {
+            if (!socket) { return; }
+            if (socket.readyState !== 1) { return; }
+            socket.close();
+            socket = null;
+          }, 15000);
+        }
+
+        function stop() {
+          audioElement.pause();
+          audioElement.currentTime = 0;
+          finalizeWebSocket();
+          if (mediaRecorder) { mediaRecorder.stop(); mediaRecorder = null; }
+        }
+
+        document.getElementById('stop').addEventListener('click', async () => {  
+          stop();
+        }, { once: true });
+      });
+
+      function splitBySpeakers(data) {
+        const result = [];
+        const words = data.channel?.alternatives?.[0]?.words;
+        let index = 0;
+        for (let i = 0; i < words.length; i++) {
+          const wordRecord = words[i];
+          const {
+            punctuated_word,
+            speaker,
+            start,
+            end,
+          } = wordRecord;
+          if (result[index] && result[index].speaker !== speaker) { index++; }
+          if (!result[index]) { result[index] = { speaker, start, text: '' }; }
+          result[index].text += punctuated_word + ' ';
+          result[index].end = end;
+        }
+        return result;
+      }
+    </script>
+  </body>
+</html>
+
